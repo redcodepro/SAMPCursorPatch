@@ -93,15 +93,15 @@ __declspec(naked) void hook_curmode_2(void)
 
 	CPad::GetPad(0)->bDisablePlayerEnterCar = 1;
 
+	__memset(0x74542B, 0x90, 8);
+	__memcpy(0x540670, "\x32\xC0\xC3", 3);
+
 	static bool lock = false;
 	if (GetKeyState(VK_RBUTTON) & 0x8000)
 	{
 		__memcpy(0x53F417, "\xE8\xB4\x7A\x20\x00", 5);
 		__memcpy(0x53F41F, "\x85\xC0\x0F\x8C", 4);
 		__memset(0x6194A0, 0xE9, 1);
-
-		__memset(0x74542B, 0x90, 8);
-		__memcpy(0x540670, "\x32\xC0\xC3", 3);
 	}
 	else
 	{
