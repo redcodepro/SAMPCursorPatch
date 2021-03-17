@@ -2,12 +2,14 @@
 #define __MAIN_H__
 
 #include <windows.h>
-#include <string>
+#include <stdint.h>
 
 #include "minhook/MinHook.h"
 #pragma comment(lib, "minhook/libMinHook.x86.lib")
 
 #include "game_sa/CPad.h"
+
+#include "stuff.h"
 
 #pragma pack(push, 1)
 
@@ -18,6 +20,20 @@ struct stDXUTEditBox
 	bool m_bVisible;                // Shown/hidden flag
 	bool m_bMouseOver;              // Mouse pointer is above control
 	bool m_bHasFocus;               // Control has input focus
+
+	// ...
+	// blah blah blah
+};
+
+struct stDXUTDialog
+{
+	uint8_t shit[278];
+
+	int m_x;
+	int m_y;
+	int m_width;
+	int m_height;
+	int m_nCaptionHeight;
 
 	// ...
 	// blah blah blah

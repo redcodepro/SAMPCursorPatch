@@ -5,6 +5,7 @@
     <ClCompile Include="game_sa\CPad.cpp">
       <Filter>game_sa</Filter>
     </ClCompile>
+    <ClCompile Include="stuff.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h" />
@@ -15,6 +16,7 @@
       <Filter>game_sa</Filter>
     </ClInclude>
     <ClInclude Include="resource.h" />
+    <ClInclude Include="stuff.h" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="minhook\libMinHook.x86.lib">

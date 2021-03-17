@@ -1,8 +1,14 @@
 ﻿#include "main.h"
 
+HWND &hwnd = *reinterpret_cast<HWND*>(0xC97C1C);
+int &screen_x = *reinterpret_cast<int*>(0xC9C040);
+int &screen_y = *reinterpret_cast<int*>(0xC9C044);
+
 DWORD dwSAMPAddr			= 0;
 DWORD dwSAMPInputOffset		= 0;
 DWORD dwSAMPDialogOffset	= 0;
+DWORD aSuperSecretAddress	= 0; // CLocalPlayer::EnterVehicleAsPassenger()
+DWORD dwSAMPDialogDrawFunc	= 0;
 
 inline stInputInfo* GetInput()
 {
@@ -12,49 +18,6 @@ inline stInputInfo* GetInput()
 inline stDialogInfo* GetDialog()
 {
 	return *reinterpret_cast<stDialogInfo**>(dwSAMPAddr + dwSAMPDialogOffset);
-}
-
-void __memset(DWORD dst, int val, size_t size, bool unfuck = true)
-{
-	if (unfuck)
-	{	
-		DWORD d;
-		if (!VirtualProtect((void*)dst, size, PAGE_EXECUTE_READWRITE, &d))
-			return;
-	}
-
-	memset((void*)dst, val, size);
-}
-
-void __memcpy(DWORD dst, void* src, size_t size, bool unfuck = true)
-{
-	if (unfuck)
-	{
-		DWORD d;
-		if (!VirtualProtect((void*)dst, size, PAGE_EXECUTE_READWRITE, &d))
-			return;
-	}
-
-	memcpy((void*)dst, src, size);
-}
-
-bool __memcmp(DWORD src0, void* src1, size_t size, bool unprotect = true)
-{
-	DWORD dwOldProtect;
-	if (unprotect)
-	{
-		if (!VirtualProtect((void*)src0, size, PAGE_EXECUTE_READWRITE, &dwOldProtect))
-			return false;
-	}
-
-	bool result = (memcmp((void*)src0, src1, size) == 0);
-
-	if (unprotect)
-	{
-		VirtualProtect((void*)src0, size, dwOldProtect, &dwOldProtect);
-	}
-
-	return result;
 }
 
 DWORD SAMP_HOOKENTER_CURSOR_MODE0 = 0x00000000;
@@ -71,6 +34,8 @@ __declspec(naked) void hook_curmode_0(void)
 	{
 		__memcpy(0x74542B, "\x50\x51\xFF\x15\x00\x83\x85\x00", 8);
 	}
+
+	__memset(aSuperSecretAddress, 0x53, 1);
 
 	__asm popad;
 
@@ -95,6 +60,8 @@ __declspec(naked) void hook_curmode_2(void)
 
 	__memset(0x74542B, 0x90, 8);
 	__memcpy(0x540670, "\x32\xC0\xC3", 3);
+
+	__memset(aSuperSecretAddress, 0xC3, 1);
 
 	static bool lock = false;
 	if (GetKeyState(VK_RBUTTON) & 0x8000)
@@ -144,6 +111,83 @@ __declspec(naked) void hook_curmode_2(void)
 	__asm jmp SAMP_HOOKEXIT_CURSOR_MODE2;
 }
 
+bool getGameCursorPos(LPPOINT lpPoint)
+{
+	POINT temp;
+	if (GetCursorPos(&temp) && ScreenToClient(hwnd, &temp))
+	{
+		lpPoint->x = temp.x;
+		lpPoint->y = temp.y;
+		return true;
+	}
+	return false;
+}
+
+bool isMouseHovered(LPPOINT lpPoint, int x, int y, int w, int h)
+{
+	if (lpPoint->x > x && lpPoint->x < x + w && lpPoint->y > y && lpPoint->y < y + h)
+		return true;
+	return false;
+}
+
+typedef void(__fastcall* hookedDialogDraw_t)(stDialogInfo*, DWORD);
+hookedDialogDraw_t orig_DialogDraw;
+void __fastcall hooked_DialogDraw(stDialogInfo* _this, DWORD edx)
+{
+	static bool move = false;
+	static int offset[2] = { 0, 0 };
+	static bool key_downed = false;
+
+	bool now_downed = (GetKeyState(VK_LBUTTON) & 0x8000);
+	bool key_pressed = now_downed && !key_downed;
+	//bool key_released = !now_downed && key_downed;
+
+	key_downed = now_downed;
+
+	if (_this->iIsActive)
+	{
+		POINT curPos;
+		getGameCursorPos(&curPos);
+		
+		if (move)
+		{
+			if (key_downed)
+			{
+				int pos_x = curPos.x - offset[0];
+				int pos_y = curPos.y - offset[1];
+
+				if (pos_x + _this->pDialog->m_width < 5)
+					pos_x = 5 - _this->pDialog->m_width;
+
+				if (pos_y + _this->pDialog->m_nCaptionHeight < 5)
+					pos_y = 5 - _this->pDialog->m_nCaptionHeight;
+
+				if (pos_x > (screen_x - 5))
+					pos_x = (screen_x - 5);
+
+				if (pos_y > (screen_y - 5))
+					pos_y = (screen_y - 5);
+
+				_this->iTextPoxX = pos_x;
+				_this->iTextPoxY = pos_y;
+				_this->pDialog->m_x = pos_x;
+				_this->pDialog->m_y = pos_y;
+			}
+			else move = false;
+		}
+		else
+		{
+			if (key_pressed && isMouseHovered(&curPos, _this->pDialog->m_x, _this->pDialog->m_y,_this->pDialog->m_width, _this->pDialog->m_nCaptionHeight))
+			{
+				offset[0] = curPos.x - _this->pDialog->m_x;
+				offset[1] = curPos.y - _this->pDialog->m_y;
+				move = true;
+			}
+		}
+	}
+	return orig_DialogDraw(_this, edx);
+}
+
 BOOL WINAPI DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 {
 	switch (reason)
@@ -165,6 +209,8 @@ BOOL WINAPI DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 			{
 			case 0x31DF13: // R1
 				{
+					dwSAMPDialogDrawFunc = dwSAMPAddr + 0x6B240;
+
 					SAMP_HOOKENTER_CURSOR_MODE0	= dwSAMPAddr + 0x9BEA1;
 					SAMP_HOOKEXIT_CURSOR_MODE0	= dwSAMPAddr + 0x9BEA6;
 
@@ -173,10 +219,14 @@ BOOL WINAPI DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 
 					dwSAMPInputOffset = 0x21A0E8;
 					dwSAMPDialogOffset = 0x21A0B8;
+
+					aSuperSecretAddress = dwSAMPAddr + 0x6D90;
 				}
 				break;
 			case 0x3195DD: // R2
 				{
+					//dwSAMPDialogDrawFunc = dwSAMPAddr + 0x6BA70;
+
 					SAMP_HOOKENTER_CURSOR_MODE0	= dwSAMPAddr + 0x9BF41;
 					SAMP_HOOKEXIT_CURSOR_MODE0	= dwSAMPAddr + 0x9BF46;
 
@@ -185,10 +235,14 @@ BOOL WINAPI DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 
 					dwSAMPInputOffset = 0x21A0F0;
 					dwSAMPDialogOffset = 0x21A0C0;
+
+					aSuperSecretAddress = dwSAMPAddr + 0x6D60;
 				}
 				break;
 			case 0xCC4D0: // R3
 				{
+					dwSAMPDialogDrawFunc = dwSAMPAddr + 0x6F140;
+
 					SAMP_HOOKENTER_CURSOR_MODE0	= dwSAMPAddr + 0xA0151;
 					SAMP_HOOKEXIT_CURSOR_MODE0	= dwSAMPAddr + 0xA0156;
 
@@ -197,10 +251,14 @@ BOOL WINAPI DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 
 					dwSAMPInputOffset = 0x26E8CC;
 					dwSAMPDialogOffset = 0x26E898;
+
+					aSuperSecretAddress = dwSAMPAddr + 0x6DA0;
 				}
 				break;
 			case 0xCBCB0: // R4
 				{
+					dwSAMPDialogDrawFunc = dwSAMPAddr + 0x6F860;
+
 					SAMP_HOOKENTER_CURSOR_MODE0	= dwSAMPAddr + 0xA0891;
 					SAMP_HOOKEXIT_CURSOR_MODE0	= dwSAMPAddr + 0xA0896;
 
@@ -209,6 +267,8 @@ BOOL WINAPI DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 
 					dwSAMPInputOffset = 0x26E9FC;
 					dwSAMPDialogOffset = 0x26E9C8;
+
+					aSuperSecretAddress = dwSAMPAddr + 0x6FD0;
 				}
 				break;
 			default:
@@ -223,12 +283,19 @@ BOOL WINAPI DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 
 			MH_CreateHookEx((void*)SAMP_HOOKENTER_CURSOR_MODE0, &hook_curmode_0, (void**)0);
 			MH_CreateHookEx((void*)SAMP_HOOKENTER_CURSOR_MODE2, &hook_curmode_2, (void**)0);
+
+			if (dwSAMPDialogDrawFunc)
+			{
+				MH_CreateHookEx((void*)dwSAMPDialogDrawFunc, &hooked_DialogDraw, &orig_DialogDraw);
+			}
 		}
 		break;
 	case DLL_PROCESS_DETACH:
 		{
 			MH_RemoveHook((void*)SAMP_HOOKENTER_CURSOR_MODE0);
 			MH_RemoveHook((void*)SAMP_HOOKENTER_CURSOR_MODE2);
+
+			MH_RemoveHook((void*)dwSAMPDialogDrawFunc);
 
 			MH_Uninitialize();
 		}

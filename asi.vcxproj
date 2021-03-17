@@ -155,6 +155,7 @@
     <ClInclude Include="main.h" />
     <ClInclude Include="minhook\MinHook.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="stuff.h" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="minhook\libMinHook.x86.lib" />
@@ -162,6 +163,7 @@
   <ItemGroup>
     <ClCompile Include="game_sa\CPad.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="stuff.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="asi.rc" />
