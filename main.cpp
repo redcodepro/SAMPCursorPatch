@@ -140,7 +140,7 @@ __declspec(naked) void hook_curmode_2(void)
 	}
 	else
 	{
-		if ((GetInput() && GetDialog()) && (GetInput()->iInputEnabled || (GetDialog()->iIsActive && GetDialog()->pEditBox->m_bHasFocus)))
+		if (GetInput() && GetDialog() && (GetInput()->iInputEnabled || (GetDialog()->iIsActive && GetDialog()->pEditBox->m_bHasFocus && (GetDialog()->iType == DIALOG_STYLE_INPUT || GetDialog()->iType == DIALOG_STYLE_PASSWORD)))) // бля...
 		{
 			__memset(0x541DF5, 0x90, 5);
 		}

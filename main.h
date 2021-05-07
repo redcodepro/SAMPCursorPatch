@@ -58,6 +58,16 @@ struct stInputInfo
 	CMDPROC									pszDefaultCMD;
 };
 
+enum eDialogStyle : int
+{
+	DIALOG_STYLE_MSGBOX = 0,
+	DIALOG_STYLE_INPUT = 1,
+	DIALOG_STYLE_LIST = 2,
+	DIALOG_STYLE_PASSWORD = 3,
+	DIALOG_STYLE_TABLIST = 4,
+	DIALOG_STYLE_TABLIST_HEADERS = 5
+};
+
 struct stDialogInfo
 {
 	void									*pVTBL;
@@ -71,7 +81,7 @@ struct stDialogInfo
 	struct stDXUTListBox					*pList;
 	struct stDXUTEditBox					*pEditBox;
 	int										iIsActive;
-	int										iType;
+	eDialogStyle							iType;
 	uint32_t								DialogID;
 	char									*pText;
 	uint32_t								font;
