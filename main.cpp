@@ -31,61 +31,6 @@ inline bool isMouseHovered(LPPOINT lpPoint, int x, int y, int w, int h)
 	return (lpPoint->x > x && lpPoint->x < x + w && lpPoint->y > y && lpPoint->y < y + h);
 }
 
-void HandleDialogMoving()
-{
-	static bool move = false;
-	static int offset[2] = { 0, 0 };
-	static bool key_downed = false;
-
-	bool now_downed = (GetKeyState(VK_LBUTTON) & 0x8000);
-	bool key_pressed = now_downed && !key_downed;
-	//bool key_released = !now_downed && key_downed;
-
-	key_downed = now_downed;
-
-	if (GetDialog() && GetDialog()->iIsActive)
-	{
-		POINT curPos;
-		getGameCursorPos(&curPos);
-
-		if (move)
-		{
-			if (key_downed)
-			{
-				int pos_x = curPos.x - offset[0];
-				int pos_y = curPos.y - offset[1];
-
-				if (pos_x + GetDialog()->pDialog->m_width < 5)
-					pos_x = 5 - GetDialog()->pDialog->m_width;
-
-				if (pos_y + GetDialog()->pDialog->m_nCaptionHeight < 5)
-					pos_y = 5 - GetDialog()->pDialog->m_nCaptionHeight;
-
-				if (pos_x > (screen_x - 5))
-					pos_x = (screen_x - 5);
-
-				if (pos_y > (screen_y - 5))
-					pos_y = (screen_y - 5);
-
-				GetDialog()->iTextPoxX = pos_x;
-				GetDialog()->iTextPoxY = pos_y;
-				GetDialog()->pDialog->m_x = pos_x;
-				GetDialog()->pDialog->m_y = pos_y;
-			}
-			else move = false;
-		}
-		else
-		{
-			if (key_pressed && isMouseHovered(&curPos, GetDialog()->pDialog->m_x, GetDialog()->pDialog->m_y, GetDialog()->pDialog->m_width, GetDialog()->pDialog->m_nCaptionHeight))
-			{
-				offset[0] = curPos.x - GetDialog()->pDialog->m_x;
-				offset[1] = curPos.y - GetDialog()->pDialog->m_y;
-				move = true;
-			}
-		}
-	}
-}
-
 DWORD SAMP_HOOKENTER_CURSOR_MODE0 = 0x00000000;
 DWORD SAMP_HOOKEXIT_CURSOR_MODE0 = 0x00000000;
 __declspec(naked) void hook_curmode_0(void)
@@ -122,8 +67,6 @@ __declspec(naked) void hook_curmode_2(void)
 {
 	__asm pushad;
 
-	HandleDialogMoving();
-
 	CPad::GetPad(0)->bDisablePlayerEnterCar = 1;
 
 	__memset(0x74542B, 0x90, 8);
@@ -140,7 +83,7 @@ __declspec(naked) void hook_curmode_2(void)
 	}
 	else
 	{
-		if (GetInput() && GetDialog() && (GetInput()->iInputEnabled || (GetDialog()->iIsActive && GetDialog()->pEditBox->m_bHasFocus && (GetDialog()->iType == DIALOG_STYLE_INPUT || GetDialog()->iType == DIALOG_STYLE_PASSWORD)))) // бля...
+		if (GetInput() && GetDialog() && (GetInput()->iInputEnabled || (GetDialog()->iIsActive && (GetDialog()->iType == DIALOG_STYLE_INPUT || GetDialog()->iType == DIALOG_STYLE_PASSWORD) && GetDialog()->pEditBox->m_bHasFocus)))
 		{
 			__memset(0x541DF5, 0x90, 5);
 		}
@@ -179,34 +122,28 @@ __declspec(naked) void hook_curmode_2(void)
 	__asm jmp SAMP_HOOKEXIT_CURSOR_MODE2;
 }
 
-BOOL WINAPI DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
+void (__cdecl* orig_CGame__Proccess)(void) = nullptr;
+void __cdecl hooked_CGame__Proccess()
 {
-	switch (reason)
+	static bool inited = false;
+	if (!inited)
 	{
-	case DLL_PROCESS_ATTACH:
+		if ((dwSAMPAddr = (DWORD)GetModuleHandle("samp.dll")) == NULL)
+			return orig_CGame__Proccess();
+
+		IMAGE_DOS_HEADER* dosHeader = reinterpret_cast<IMAGE_DOS_HEADER*>(dwSAMPAddr);
+		IMAGE_NT_HEADERS* ntHeader = reinterpret_cast<IMAGE_NT_HEADERS*>((uint8_t*)dosHeader + dosHeader->e_lfanew);
+		switch (ntHeader->OptionalHeader.AddressOfEntryPoint)
 		{
-			DisableThreadLibraryCalls(hModule);
-
-			dwSAMPAddr = (DWORD)GetModuleHandle("samp.dll");
-			if (dwSAMPAddr == NULL)
-			{
-				MessageBoxA(NULL, "SA-MP was not loaded.", "SAMPCursorPatch.asi", MB_OK | MB_ICONERROR);
-				return false;
-			}
-
-			IMAGE_NT_HEADERS *ntheader = reinterpret_cast<IMAGE_NT_HEADERS*>(dwSAMPAddr + reinterpret_cast<IMAGE_DOS_HEADER*>(dwSAMPAddr)->e_lfanew);
-			uintptr_t ep = ntheader->OptionalHeader.AddressOfEntryPoint;
-			switch (ep)
-			{
 			case 0x31DF13: // R1
 				{
 					dwSAMPVersion = 1;
 
-					SAMP_HOOKENTER_CURSOR_MODE0	= dwSAMPAddr + 0x9BEA1;
-					SAMP_HOOKEXIT_CURSOR_MODE0	= dwSAMPAddr + 0x9BEA6;
+					SAMP_HOOKENTER_CURSOR_MODE0 = dwSAMPAddr + 0x9BEA1;
+					SAMP_HOOKEXIT_CURSOR_MODE0 = dwSAMPAddr + 0x9BEA6;
 
-					SAMP_HOOKENTER_CURSOR_MODE2	= dwSAMPAddr + 0x9BD3F;
-					SAMP_HOOKEXIT_CURSOR_MODE2	= dwSAMPAddr + 0x9BD94;
+					SAMP_HOOKENTER_CURSOR_MODE2 = dwSAMPAddr + 0x9BD3F;
+					SAMP_HOOKEXIT_CURSOR_MODE2 = dwSAMPAddr + 0x9BD94;
 
 					aSuperSecretAddress = dwSAMPAddr + 0x6D90;
 				}
@@ -215,11 +152,11 @@ BOOL WINAPI DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 				{
 					dwSAMPVersion = 2;
 
-					SAMP_HOOKENTER_CURSOR_MODE0	= dwSAMPAddr + 0x9BF41;
-					SAMP_HOOKEXIT_CURSOR_MODE0	= dwSAMPAddr + 0x9BF46;
+					SAMP_HOOKENTER_CURSOR_MODE0 = dwSAMPAddr + 0x9BF41;
+					SAMP_HOOKEXIT_CURSOR_MODE0 = dwSAMPAddr + 0x9BF46;
 
-					SAMP_HOOKENTER_CURSOR_MODE2	= dwSAMPAddr + 0x9BDDF;
-					SAMP_HOOKEXIT_CURSOR_MODE2	= dwSAMPAddr + 0x9BE34;
+					SAMP_HOOKENTER_CURSOR_MODE2 = dwSAMPAddr + 0x9BDDF;
+					SAMP_HOOKEXIT_CURSOR_MODE2 = dwSAMPAddr + 0x9BE34;
 
 					aSuperSecretAddress = dwSAMPAddr + 0x6D60;
 				}
@@ -228,11 +165,11 @@ BOOL WINAPI DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 				{
 					dwSAMPVersion = 3;
 
-					SAMP_HOOKENTER_CURSOR_MODE0	= dwSAMPAddr + 0xA0151;
-					SAMP_HOOKEXIT_CURSOR_MODE0	= dwSAMPAddr + 0xA0156;
+					SAMP_HOOKENTER_CURSOR_MODE0 = dwSAMPAddr + 0xA0151;
+					SAMP_HOOKEXIT_CURSOR_MODE0 = dwSAMPAddr + 0xA0156;
 
-					SAMP_HOOKENTER_CURSOR_MODE2	= dwSAMPAddr + 0x9FFEF;
-					SAMP_HOOKEXIT_CURSOR_MODE2	= dwSAMPAddr + 0xA0044;
+					SAMP_HOOKENTER_CURSOR_MODE2 = dwSAMPAddr + 0x9FFEF;
+					SAMP_HOOKEXIT_CURSOR_MODE2 = dwSAMPAddr + 0xA0044;
 
 					aSuperSecretAddress = dwSAMPAddr + 0x6DA0;
 				}
@@ -241,33 +178,107 @@ BOOL WINAPI DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 				{
 					dwSAMPVersion = 4;
 
-					SAMP_HOOKENTER_CURSOR_MODE0	= dwSAMPAddr + 0xA0891;
-					SAMP_HOOKEXIT_CURSOR_MODE0	= dwSAMPAddr + 0xA0896;
+					SAMP_HOOKENTER_CURSOR_MODE0 = dwSAMPAddr + 0xA0891;
+					SAMP_HOOKEXIT_CURSOR_MODE0 = dwSAMPAddr + 0xA0896;
 
-					SAMP_HOOKENTER_CURSOR_MODE2	= dwSAMPAddr + 0xA072F;
-					SAMP_HOOKEXIT_CURSOR_MODE2	= dwSAMPAddr + 0xA0784;
+					SAMP_HOOKENTER_CURSOR_MODE2 = dwSAMPAddr + 0xA072F;
+					SAMP_HOOKEXIT_CURSOR_MODE2 = dwSAMPAddr + 0xA0784;
 
 					aSuperSecretAddress = dwSAMPAddr + 0x6FD0;
 				}
 				break;
 			default:
-				{
-					MessageBoxA(NULL, "Unknown SA-MP version.", "SAMPCursorPatch.asi", MB_OK | MB_ICONERROR);
-					return false;
-				}
+				MessageBox(NULL, "Unknown SA-MP version.", "SAMPCursorPatch.asi", MB_OK | MB_ICONERROR);
 				break;
+		}
+
+		if (dwSAMPVersion)
+		{
+			MH_CreateHookA(SAMP_HOOKENTER_CURSOR_MODE0, &hook_curmode_0, (void**)0);
+			MH_CreateHookA(SAMP_HOOKENTER_CURSOR_MODE2, &hook_curmode_2, (void**)0);
+		}
+
+		inited = true;
+	}
+	
+	if (dwSAMPVersion)
+	{
+		static bool move = false;
+		static int offset[2] = { 0, 0 };
+		static bool key_downed = false;
+
+		bool now_downed = (GetKeyState(VK_LBUTTON) & 0x8000);
+		bool key_pressed = now_downed && !key_downed;
+
+		key_downed = now_downed;
+
+		if (GetDialog() && GetDialog()->iIsActive)
+		{
+			POINT curPos;
+			getGameCursorPos(&curPos);
+
+			if (move)
+			{
+				if (key_downed)
+				{
+					int pos_x = curPos.x - offset[0];
+					int pos_y = curPos.y - offset[1];
+
+					if (pos_x + GetDialog()->pDialog->m_width < 5)
+						pos_x = 5 - GetDialog()->pDialog->m_width;
+
+					if (pos_y + GetDialog()->pDialog->m_nCaptionHeight < 5)
+						pos_y = 5 - GetDialog()->pDialog->m_nCaptionHeight;
+
+					if (pos_x > (screen_x - 5))
+						pos_x = (screen_x - 5);
+
+					if (pos_y > (screen_y - 5))
+						pos_y = (screen_y - 5);
+
+					GetDialog()->iTextPoxX = pos_x;
+					GetDialog()->iTextPoxY = pos_y;
+					GetDialog()->pDialog->m_x = pos_x;
+					GetDialog()->pDialog->m_y = pos_y;
+				}
+				else move = false;
 			}
+			else
+			{
+				if (key_pressed && isMouseHovered(&curPos, GetDialog()->pDialog->m_x, GetDialog()->pDialog->m_y, GetDialog()->pDialog->m_width, GetDialog()->pDialog->m_nCaptionHeight))
+				{
+					offset[0] = curPos.x - GetDialog()->pDialog->m_x;
+					offset[1] = curPos.y - GetDialog()->pDialog->m_y;
+					move = true;
+				}
+			}
+		}
+	}
+	return orig_CGame__Proccess();
+}
+
+BOOL WINAPI DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
+{
+	switch (reason)
+	{
+	case DLL_PROCESS_ATTACH:
+		{
+			DisableThreadLibraryCalls(hModule);
 
 			MH_Initialize();
 
-			MH_CreateHookEx((void*)SAMP_HOOKENTER_CURSOR_MODE0, &hook_curmode_0, (void**)0);
-			MH_CreateHookEx((void*)SAMP_HOOKENTER_CURSOR_MODE2, &hook_curmode_2, (void**)0);
+			MH_CreateHookA(0x53BEE0, &hooked_CGame__Proccess, &orig_CGame__Proccess);
 		}
 		break;
 	case DLL_PROCESS_DETACH:
 		{
-			MH_RemoveHook((void*)SAMP_HOOKENTER_CURSOR_MODE0);
-			MH_RemoveHook((void*)SAMP_HOOKENTER_CURSOR_MODE2);
+			MH_RemoveHookA(0x53BEE0);
+
+			if (dwSAMPVersion)
+			{
+				MH_RemoveHookA(SAMP_HOOKENTER_CURSOR_MODE0);
+				MH_RemoveHookA(SAMP_HOOKENTER_CURSOR_MODE2);
+			}
 
 			MH_Uninitialize();
 		}

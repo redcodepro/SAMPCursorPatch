@@ -185,10 +185,15 @@ extern "C" {
 #endif
 
 template <typename T>
-inline MH_STATUS MH_CreateHookEx(LPVOID pTarget, LPVOID pDetour, T** ppOriginal)
+inline MH_STATUS MH_CreateHookA(DWORD dwAddr, LPVOID pDetour, T** ppOriginal)
 {
-	MH_STATUS status = MH_CreateHook(pTarget, pDetour, reinterpret_cast<void**>(ppOriginal));
+	MH_STATUS status = MH_CreateHook((LPVOID)dwAddr, pDetour, (LPVOID*)(ppOriginal));
 	if (status != MH_STATUS::MH_OK)
 		return status;
-	return MH_EnableHook(pTarget);
+	return MH_EnableHook((LPVOID)dwAddr);
+}
+
+inline MH_STATUS MH_RemoveHookA(DWORD dwAddr)
+{
+	return MH_RemoveHook((LPVOID)dwAddr);
 }
