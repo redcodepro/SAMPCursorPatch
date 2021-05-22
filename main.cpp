@@ -6,8 +6,8 @@ int &screen_y = *reinterpret_cast<int*>(0xC9C044);
 DWORD dwSAMPAddr	= 0;
 DWORD dwSAMPVersion	= 0;
 
-DWORD dwSAMPInputOffset[] = { 0, 0x21A0E8, 0x21A0F0, 0x26E8CC, 0x26E9FC };
-DWORD dwSAMPDialogOffset[] = { 0, 0x21A0B8, 0x21A0C0, 0x26E898, 0x26E9C8 };
+DWORD dwSAMPInputOffset[] = { 0, 0x21A0E8, 0x21A0F0, 0x26E8CC, 0x26E9FC, 0x26E9FC };
+DWORD dwSAMPDialogOffset[] = { 0, 0x21A0B8, 0x21A0C0, 0x26E898, 0x26E9C8, 0x26E9C8 };
 
 DWORD aSuperSecretAddress	= 0; // CLocalPlayer::EnterVehicleAsPassenger()
 
@@ -185,6 +185,19 @@ void __cdecl hooked_CGame__Proccess()
 					SAMP_HOOKEXIT_CURSOR_MODE2 = dwSAMPAddr + 0xA0784;
 
 					aSuperSecretAddress = dwSAMPAddr + 0x6FD0;
+				}
+				break;
+			case 0xCBCD0: // R4-2
+				{
+					dwSAMPVersion = 5;
+
+					SAMP_HOOKENTER_CURSOR_MODE0 = dwSAMPAddr + 0xA08C1;
+					SAMP_HOOKEXIT_CURSOR_MODE0 = dwSAMPAddr + 0xA08C6;
+
+					SAMP_HOOKENTER_CURSOR_MODE2 = dwSAMPAddr + 0xA075F;
+					SAMP_HOOKEXIT_CURSOR_MODE2 = dwSAMPAddr + 0xA07B4;
+
+					aSuperSecretAddress = dwSAMPAddr + 0x6FE0;
 				}
 				break;
 			default:
