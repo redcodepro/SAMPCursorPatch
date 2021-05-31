@@ -6,6 +6,8 @@
       <Filter>game_sa</Filter>
     </ClCompile>
     <ClCompile Include="stuff.cpp" />
+    <ClCompile Include="samp.cpp" />
+    <ClCompile Include="ci_cursorpatch.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h" />
@@ -17,6 +19,8 @@
     </ClInclude>
     <ClInclude Include="resource.h" />
     <ClInclude Include="stuff.h" />
+    <ClInclude Include="samp.h" />
+    <ClInclude Include="ci_cursorpatch.h" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="minhook\libMinHook.x86.lib">

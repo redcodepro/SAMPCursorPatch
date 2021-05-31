@@ -103,6 +103,8 @@
       <UseFullPaths>false</UseFullPaths>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <SDLCheck>false</SDLCheck>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -114,18 +116,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="ci_cursorpatch.h" />
     <ClInclude Include="game_sa\CPad.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="minhook\MinHook.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="samp.h" />
     <ClInclude Include="stuff.h" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="minhook\libMinHook.x86.lib" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ci_cursorpatch.cpp" />
     <ClCompile Include="game_sa\CPad.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="samp.cpp" />
     <ClCompile Include="stuff.cpp" />
   </ItemGroup>
   <ItemGroup>

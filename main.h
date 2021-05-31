@@ -1,96 +1,24 @@
 #ifndef __MAIN_H__
 #define __MAIN_H__
 
+#define DIRECTINPUT_VERSION 0x0800
+
 #include <windows.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <d3d9.h>
+#include <dinput.h>
 
 #include "minhook/MinHook.h"
 #pragma comment(lib, "minhook/libMinHook.x86.lib")
 
 #include "game_sa/CPad.h"
 
+#include "samp.h"
 #include "stuff.h"
 
-#pragma pack(push, 1)
+#include "ci_cursorpatch.h"
 
-// DXUT
-struct stDXUTEditBox
-{
-	void *pUnknown;
-	bool m_bVisible;                // Shown/hidden flag
-	bool m_bMouseOver;              // Mouse pointer is above control
-	bool m_bHasFocus;               // Control has input focus
-
-	// ...
-	// blah blah blah
-};
-
-struct stDXUTDialog
-{
-	uint8_t shit[278];
-
-	int m_x;
-	int m_y;
-	int m_width;
-	int m_height;
-	int m_nCaptionHeight;
-
-	// ...
-	// blah blah blah
-};
-
-// SAMP
-typedef void(__cdecl *CMDPROC)(PCHAR);
-struct stInputInfo
-{
-	void									*pD3DDevice;
-	void									*pDXUTDialog;
-	struct stDXUTEditBox					*pDXUTEditBox;
-	CMDPROC									pCMDs[144];
-	char									szCMDNames[144][33];
-	int										iCMDCount;
-	int										iInputEnabled;
-	char									szInputBuffer[129];
-	char									szRecallBufffer[10][129];
-	char									szCurrentBuffer[129];
-	int										iCurrentRecall;
-	int										iTotalRecalls;
-	CMDPROC									pszDefaultCMD;
-};
-
-enum eDialogStyle : int
-{
-	DIALOG_STYLE_MSGBOX = 0,
-	DIALOG_STYLE_INPUT = 1,
-	DIALOG_STYLE_LIST = 2,
-	DIALOG_STYLE_PASSWORD = 3,
-	DIALOG_STYLE_TABLIST = 4,
-	DIALOG_STYLE_TABLIST_HEADERS = 5
-};
-
-struct stDialogInfo
-{
-	void									*pVTBL;
-	int										iTextPoxX;
-	int										iTextPoxY;
-	int										iTextSizeX;
-	int										iTextSizeY;
-	int										iBtnOffsetX;
-	int										iBtnOffsetY;
-	struct stDXUTDialog						*pDialog;
-	struct stDXUTListBox					*pList;
-	struct stDXUTEditBox					*pEditBox;
-	int										iIsActive;
-	eDialogStyle							iType;
-	uint32_t								DialogID;
-	char									*pText;
-	uint32_t								font;
-	uint32_t								font2;
-	char									szCaption[64];
-	uint8_t									byteUnknown;
-	int										bServerside;
-};
-
-#pragma pack(pop)
+extern CSAMP *SAMP;
 
 #endif
