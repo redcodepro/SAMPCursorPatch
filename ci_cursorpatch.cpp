@@ -24,7 +24,7 @@ __declspec(naked) void hook_curmode_0(void)
 {
 	__asm pushad;
 
-	CURSOR_MODE = 0;
+	//CURSOR_MODE = 0;
 
 	CPad::GetPad(0)->bDisablePlayerEnterCar = 0;
 
@@ -73,7 +73,7 @@ HRESULT __cdecl hooked_CPad__getMouseState(DIMOUSESTATE2 *dm)
 {
 	HRESULT hr = orig_CPad__getMouseState(dm);
 
-	if (CURSOR_MODE == 2)
+	if (CURSOR_MODE > 0)
 	{
 		memcpy(&mouse_state, dm, sizeof(DIMOUSESTATE2));
 
@@ -85,6 +85,8 @@ HRESULT __cdecl hooked_CPad__getMouseState(DIMOUSESTATE2 *dm)
 		{
 			ZeroMemory(dm, sizeof(DIMOUSESTATE2));
 		}
+
+		CURSOR_MODE--;
 	}
 	else
 	{
