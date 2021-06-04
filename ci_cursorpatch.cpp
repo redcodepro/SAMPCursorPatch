@@ -8,7 +8,6 @@ DWORD SAMP_HOOKENTER_CURSOR_MODE2 = 0;
 DWORD SAMP_HOOKEXIT_CURSOR_MODE2 = 0;
 
 int CURSOR_MODE = 0;
-DIMOUSESTATE2 mouse_state;
 
 inline bool isUnlockAvailable()
 {
@@ -24,7 +23,7 @@ __declspec(naked) void hook_curmode_0(void)
 {
 	__asm pushad;
 
-	//CURSOR_MODE = 0;
+	CURSOR_MODE = 0;
 
 	CPad::GetPad(0)->bDisablePlayerEnterCar = 0;
 
@@ -71,40 +70,36 @@ __declspec(naked) void hook_curmode_2(void)
 HRESULT(__cdecl* orig_CPad__getMouseState)(DIMOUSESTATE2 *dm) = nullptr;
 HRESULT __cdecl hooked_CPad__getMouseState(DIMOUSESTATE2 *dm)
 {
+	static int lock_state = 0;
+	static DIMOUSESTATE2 mouse_state;
+
 	HRESULT hr = orig_CPad__getMouseState(dm);
 
-	if (CURSOR_MODE > 0)
+	if (CURSOR_MODE)
+		lock_state = 3;
+	else
+		if (lock_state > 0)
+			lock_state--;
+
+	if (lock_state)
 	{
 		memcpy(&mouse_state, dm, sizeof(DIMOUSESTATE2));
 
 		if (dm->rgbButtons[1]/* && isUnlockAvailable()*/)
-		{
 			ZeroMemory(dm->rgbButtons, sizeof(dm->rgbButtons));
-		}
 		else
-		{
 			ZeroMemory(dm, sizeof(DIMOUSESTATE2));
-		}
-
-		CURSOR_MODE--;
 	}
 	else
 	{
 		for (size_t i = 0; i < 5; ++i)
-		{
 			if (mouse_state.rgbButtons[i])
-			{
 				if (dm->rgbButtons[i])
-				{
 					dm->rgbButtons[i] = 0;
-				}
 				else
-				{
 					mouse_state.rgbButtons[i] = 0;
-				}
-			}
-		}
 	}
+
 	return hr;
 }
 
